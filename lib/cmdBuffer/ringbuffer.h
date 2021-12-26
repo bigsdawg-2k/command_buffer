@@ -112,7 +112,8 @@ public:
         return n;
     }
 
-    size_t getOccupied() {
+    size_t getOccupied() 
+    {
         if (end == begin) {
             return wrap ? size : 0;
         } else if (end > begin) {
@@ -122,7 +123,8 @@ public:
         }
     }
 
-    size_t getFree() {
+    size_t getFree() 
+    {
         return size - getOccupied();
     }
 private:
