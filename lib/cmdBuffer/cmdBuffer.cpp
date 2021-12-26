@@ -24,6 +24,7 @@ int CmdBuffer::getNumDelims(char * data, int len)
     return count;
 }
 
+// Get the next command and save it in dest.  Return the size of the command read.
 int CmdBuffer::readCmd(char * dest)
 {
     static int size;
@@ -54,9 +55,8 @@ size_t CmdBuffer::write(char * data, size_t n)
 {
     
     static int i;
-    static int prevCmdEnd;
-    static int scratch;
-
+    static int thisCmdStart;
+    
     // Copy data to rbCmdBuf if there's room for:
     //   - data in rbSerBuf
     //   - command lengths in rbCmdLenBuf
@@ -65,13 +65,13 @@ size_t CmdBuffer::write(char * data, size_t n)
     {
         rbSerBuf->write(data, n);
         // Check data for are any command delimiters
-        for (i = 0, prevCmdEnd = 0, scratch = 0; i < n; i++)
+        for (i = 0, thisCmdStart = 0; i < n; i++)
         {
             if (data[i] == CmdBuffer::delim)
             {
-                scratch = i - prevCmdEnd;
-                rbCmdLenBuf->write(&scratch, 1);
-                prevCmdEnd = i;
+                thisCmdStart = i - thisCmdStart + 1;  // temporarily used to hold size of command for buffer write
+                rbCmdLenBuf->write(&thisCmdStart, 1);
+                thisCmdStart = i + 1;
             } 
         }
         return n;

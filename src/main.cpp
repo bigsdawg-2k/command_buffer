@@ -18,7 +18,7 @@ using std::endl;
 CmdBuffer* cmdBuf;
 
 // Various scratch pad variables
-int lenTestCmdArr = 0;
+int testCmdArrLen = 0;
 char * testCmdArr = new char[1024]();
 int * tmpInts = new int[NUM_TEMP_INTS]();
 char * testTempArr = new char[1024]();
@@ -26,18 +26,22 @@ char * testTempArr = new char[1024]();
 // Stores test results
 bool * testResults = new bool[NUM_TESTS]();
 
-
-int main()
+int main(void) 
 {
  
     cmdBuf = new CmdBuffer(NUM_BYTES_SERIAL_BT_BUFF);
  
     /*
      * TEST CASE 1: Basic Functionality
+     * Create a cmdBuffer
+     * Add a command
+     * Check the buffer state
+     * Get the command
+     * Check the buffer state
      */
     testResults[0] = true;
     strcpy(testCmdArr, TEST_ONE_CMD);
-    lenTestCmdArr = sizeof(TEST_ONE_CMD);
+    testCmdArrLen = sizeof(TEST_ONE_CMD) - 1; // Don't count the null terminator
     
     // Check that the newly created object has the correct initial state
     // The new buffer was created in the setUp()
@@ -50,10 +54,10 @@ int main()
     }
     
     // Add a command to the buffer
-    tmpInts[0] = cmdBuf->write(testCmdArr, lenTestCmdArr);
-    if(tmpInts[0] != lenTestCmdArr) 
+    tmpInts[0] = cmdBuf->write(testCmdArr, testCmdArrLen);
+    if(tmpInts[0] != testCmdArrLen) 
     { 
-        cout << "cmdBuf->write() returned " << tmpInts[0] << ", expected " << lenTestCmdArr; 
+        cout << "cmdBuf->write() returned " << tmpInts[0] << ", expected " << testCmdArrLen; 
         testResults[0] = false;
     }
     
@@ -65,7 +69,27 @@ int main()
     }
     
     // Read the command from the buffer
-    cmdBuf->readCmd(testTempArr);
-    cout << "Read back: (" << testTempArr << ") after having written (" << ")" << endl;
+    tmpInts[0] = cmdBuf->readCmd(testTempArr);
+    if(tmpInts[0] != testCmdArrLen ||
+        strcmp(testTempArr, testCmdArr) != 0 ||
+        cmdBuf->getNumCmds() != 0)
+    {
+        cout << "cmdBuf->readCmd() returned " << tmpInts[0] << " bytes, expected " << testCmdArrLen << endl;
+        cout << "cmdBuf->readCmd() returned " << testTempArr << ", expected " << testCmdArr << endl;
+        testResults[0] = false;
+    }
+    
+    // Log test results
+    for(int i = 0; i < NUM_TESTS; i++)
+    {
+        if(testResults[i] == false)
+        {
+            cout << "Test #" << i+1 << " failed" << endl;
+        }
+        else
+        {
+            cout << "Test #" << i+1 << " passed" << endl;
+        }
+    }
 
 }
