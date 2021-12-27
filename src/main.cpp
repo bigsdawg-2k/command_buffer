@@ -212,6 +212,62 @@ bool tc2_bufferFill(char * msgTestResult)
 
 } // TC2
 
+/*
+ * TEST CASE 3: Multiple command add 
+ */
+bool tc3_addMultipleCommands(char * msgTestResult) 
+{
+    #define TC3_NUM_BYTES_SERIAL_BT_BUFF    20
+    #define TC3_CMD                "P0;P1;P2;"
+        
+    strcpy(msgTestResult, "TC3: Add multiple commands test (in one message)...\n");
+    
+    // Main command buffer for testing
+    CmdBuffer* cmdBuf;
+    cmdBuf = new CmdBuffer(TC3_NUM_BYTES_SERIAL_BT_BUFF);
+
+    // TC variables
+    bool tc_result = true;
+    int tc_int, tc_CmdArrLen, i;
+    char * tc_cmd = new char[64]();
+    char * tc_ref = new char[64]();
+
+    strcpy(tc_cmd, TC3_CMD);
+    
+    // Add the message with multiple commands
+    strcat(msgTestResult, "  Starting message write...\n");
+    tc_int = cmdBuf->write(tc_cmd, strlen(tc_cmd));
+    if(tc_int != strlen(tc_cmd))
+    {
+        sprintf(tc_tmpMsg, "    Serial buffer received %d bytes, expected %d\n", tc_int, strlen(tc_cmd));
+        strcat(msgTestResult, tc_tmpMsg);
+        tc_result = false;
+    }
+
+    // Read out all of the commands
+    strcat(msgTestResult, "  Starting buffer emptying through reads...\n");
+    for(i = 0, tc_int = 1; i < 3; i++)
+    {
+        sprintf(tc_ref, "P%d;", i);
+        tc_int = cmdBuf->readCmd(tc_cmd);
+        tc_cmd[tc_int] = 0;
+        if(tc_int <= 0)
+        {
+            strcat(msgTestResult, "    Expected more commands, but nothing was returned\n");
+            tc_result = false;
+        }
+        else if(strcmp(tc_cmd, tc_ref) != 0)
+        {
+            sprintf(tc_tmpMsg, "    Read back: (%s), Expected (%s)\n", tc_cmd, tc_ref);
+            strcat(msgTestResult, tc_tmpMsg);
+            tc_result = false;
+        }
+    }
+
+    return tc_result;
+    
+}
+
 
 // Stores test results
 bool * testResults = new bool[NUM_TESTS]();
@@ -225,5 +281,8 @@ int main(void)
 
     testResults[1] = tc2_bufferFill(tc_resultMessage);   
     printTcResult(testResults[1], 2, tc_resultMessage);
+    
+    testResults[2] = tc3_addMultipleCommands(tc_resultMessage);   
+    printTcResult(testResults[2], 3, tc_resultMessage);
 
 }
