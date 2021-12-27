@@ -9,87 +9,221 @@ using std::endl;
 
 #define NUM_BYTES_SERIAL_BT_BUFF    1024
 #define MAX_LOG_MSG                 1024
-#define NUM_TEMP_INTS               3 
-#define NUM_TESTS                   1
+#define NUM_TESTS                   2
 
-#define TEST_ONE_CMD "P0;"
+char * tc_tmpMsg = new char[1024]();
 
-// Main command buffer for testing
-CmdBuffer* cmdBuf;
-
-// Various scratch pad variables
-int testCmdArrLen = 0;
-char * testCmdArr = new char[1024]();
-int * tmpInts = new int[NUM_TEMP_INTS]();
-char * testTempArr = new char[1024]();
-
-// Stores test results
-bool * testResults = new bool[NUM_TESTS]();
-
-int main(void) 
+/* 
+ * Print a test result
+ */
+void printTcResult(bool result, int tcNum, char * msgResult)
 {
- 
-    cmdBuf = new CmdBuffer(NUM_BYTES_SERIAL_BT_BUFF);
- 
-    /*
-     * TEST CASE 1: Basic Functionality
-     * Create a cmdBuffer
-     * Add a command
-     * Check the buffer state
-     * Get the command
-     * Check the buffer state
-     */
-    testResults[0] = true;
-    strcpy(testCmdArr, TEST_ONE_CMD);
-    testCmdArrLen = sizeof(TEST_ONE_CMD) - 1; // Don't count the null terminator
     
+    if(result == false)
+    {
+        cout << "TC" << tcNum << " failed" << endl;
+    }
+    else
+    {
+        cout << "TC" << tcNum << " passed" << endl;
+    }
+
+    cout << msgResult << endl << endl;
+    
+}
+
+/*
+ * TEST CASE 1: Basic Functionality
+ * Create a cmdBuffer
+ * Add a command
+ * Check the buffer state
+ * Get the command
+ * Check the buffer state
+ */
+bool tc1_basicFunctionality(char * msgTestResult) 
+{
+
+    #define TC1_COMMAND                     "P0;"
+    #define TC1_NUM_BYTES_SERIAL_BT_BUFF    NUM_BYTES_SERIAL_BT_BUFF
+
+    // Main command buffer for testing
+    CmdBuffer* cmdBuf;
+    cmdBuf = new CmdBuffer(TC1_NUM_BYTES_SERIAL_BT_BUFF);
+
+    // TC variables
+    bool tc_result = true;
+    int tc_int, tc_CmdArrLen;
+    char * tc_cmdArr = new char[64]();
+    char * tc_charArr = new char[64]();
+
+    strcpy(tc_cmdArr, TC1_COMMAND);
+    tc_CmdArrLen = strlen(TC1_COMMAND);
+
     // Check that the newly created object has the correct initial state
     // The new buffer was created in the setUp()
     if(cmdBuf->getNumCmds() != 0 ||
-        cmdBuf->getFree() != 1024 || 
+        cmdBuf->getFreeSerBuf() != TC1_NUM_BYTES_SERIAL_BT_BUFF || 
         cmdBuf->getOccupied() != 0)
     {
         cout << "getNumCmds(), getFree(), or getOccupied() incorrectly initialized";
-        testResults[0] = false;
+        tc_result = false;
     }
     
     // Add a command to the buffer
-    tmpInts[0] = cmdBuf->write(testCmdArr, testCmdArrLen);
-    if(tmpInts[0] != testCmdArrLen) 
+    tc_int = cmdBuf->write(tc_cmdArr, tc_CmdArrLen);
+    if(tc_int != tc_CmdArrLen) 
     { 
-        cout << "cmdBuf->write() returned " << tmpInts[0] << ", expected " << testCmdArrLen; 
-        testResults[0] = false;
+        cout << "cmdBuf->write() returned " << tc_int << ", expected " << tc_CmdArrLen; 
+        tc_result = false;
     }
     
-    tmpInts[0] = cmdBuf->getNumCmds();
-    if(tmpInts[0] != 1)
+    tc_int = cmdBuf->getNumCmds();
+    if(tc_int != 1)
     { 
-        cout << "cmdBuf->getNumCmds() returned " << tmpInts[0] << ", expected " << 1;
-        testResults[0] = false;
+        cout << "cmdBuf->getNumCmds() returned " << tc_int << ", expected " << 1;
+        tc_result = false;
     }
     
     // Read the command from the buffer
-    tmpInts[0] = cmdBuf->readCmd(testTempArr);
-    if(tmpInts[0] != testCmdArrLen ||
-        strcmp(testTempArr, testCmdArr) != 0 ||
+    tc_int = cmdBuf->readCmd(tc_charArr);
+    if(tc_int != tc_CmdArrLen ||
+        strcmp(tc_charArr, tc_cmdArr) != 0 ||
         cmdBuf->getNumCmds() != 0)
     {
-        cout << "cmdBuf->readCmd() returned " << tmpInts[0] << " bytes, expected " << testCmdArrLen << endl;
-        cout << "cmdBuf->readCmd() returned " << testTempArr << ", expected " << testCmdArr << endl;
-        testResults[0] = false;
+        cout << "cmdBuf->readCmd() returned " << tc_int << " bytes, expected " << tc_CmdArrLen << endl;
+        cout << "cmdBuf->readCmd() returned " << tc_charArr << ", expected " << tc_cmdArr << endl;
+        tc_result = false;
+    }
+
+    return tc_result;
+
+} // TC1
+
+/*
+ * TEST CASE 2: Buffer overflow test
+ * Create a small cmdBuffer
+ * Add commands until it is full
+ * Check the buffer state
+ * Read out a command
+ * Add commands until full
+ * Read out all commands
+ * Check the buffer state
+ */
+bool tc2_bufferFill(char * msgTestResult) 
+{
+
+    #define TC2_NUM_BYTES_SERIAL_BT_BUFF    20
+    #define TC2_CMD_TEMPLATE                "P#;"
+        
+    strcpy(msgTestResult, "TC2: Buffer fill test...\n");
+
+    // Main command buffer for testing
+    CmdBuffer* cmdBuf;
+    cmdBuf = new CmdBuffer(TC2_NUM_BYTES_SERIAL_BT_BUFF);
+
+    // TC variables
+    bool tc_result = true;
+    int tc_int, tc_CmdArrLen, i;
+    char * tc_cmd = new char[64]();
+    char * tc_ref = new char[64]();
+
+    // Fill the buffer   
+    strcat(msgTestResult, "  Starting buffer fill through writes...\n");
+    for(i = 0, tc_int = 1; tc_int > 0; i++)
+    {
+        sprintf(tc_cmd, "P%d;", i);
+        tc_CmdArrLen = strlen(tc_cmd);
+        tc_int = cmdBuf->write(tc_cmd, tc_CmdArrLen);
+    }
+
+    // Check the buffer state
+    strcat(msgTestResult, "  Checking buffer state...\n");
+    tc_int = TC2_NUM_BYTES_SERIAL_BT_BUFF - (strlen(TC2_CMD_TEMPLATE)*(TC2_NUM_BYTES_SERIAL_BT_BUFF/strlen(TC2_CMD_TEMPLATE)));
+    if(cmdBuf->getFreeSerBuf() != tc_int) 
+    {
+        sprintf(tc_tmpMsg, "    Serial buffer free: %d, Needed %d\n", cmdBuf->getFreeSerBuf(), tc_int);
+        strcat(msgTestResult, tc_tmpMsg);
+        tc_result = false;
     }
     
-    // Log test results
-    for(int i = 0; i < NUM_TESTS; i++)
+    // Read out one command
+    tc_int = cmdBuf->readCmd(tc_cmd);
+    if (tc_int != sizeof("P0;") - 1)
     {
-        if(testResults[i] == false)
+        sprintf(tc_tmpMsg, "    Read command of size (%d), Expected (%d)\n", tc_int, sizeof("P0;") - 1);
+        strcat(msgTestResult, tc_tmpMsg);
+        tc_result = false;
+    }   
+
+    if (strcmp(tc_cmd, "P0;") != 0)
+    {
+        sprintf(tc_tmpMsg, "    Read back: (%s), Expected (%s)\n", tc_cmd, "P0;");
+        strcat(msgTestResult, tc_tmpMsg);
+        tc_result = false;
+    }   
+    
+    // Refill the buffer
+    strcat(msgTestResult, "  Starting buffer refill through writes...\n");
+    for(i = cmdBuf->getNumCmds() + 1, tc_int = 1; tc_int > 0; i++)
+    {
+        sprintf(tc_cmd, "P%d;", i);
+        tc_CmdArrLen = strlen(tc_cmd);
+        tc_int = cmdBuf->write(tc_cmd, tc_CmdArrLen);
+    }
+
+    // Check the buffer state
+    strcat(msgTestResult, "  Checking buffer state after refill...\n");
+    tc_int = TC2_NUM_BYTES_SERIAL_BT_BUFF - (strlen(TC2_CMD_TEMPLATE)*(TC2_NUM_BYTES_SERIAL_BT_BUFF/strlen(TC2_CMD_TEMPLATE)));
+    if(cmdBuf->getFreeSerBuf() != tc_int) 
+    {
+        sprintf(tc_tmpMsg, "    Serial buffer free: %d, Needed %d\n", cmdBuf->getFreeSerBuf(), tc_int);
+        strcat(msgTestResult, tc_tmpMsg);
+        tc_result = false;
+    }
+
+    // Read out all of the buffer's commands
+    strcat(msgTestResult, "  Starting buffer emptying through reads...\n");
+    for(i = 1, tc_int = 1; tc_int > 0; i++)
+    {
+        sprintf(tc_ref, "P%d;", i);
+        tc_int = cmdBuf->readCmd(tc_cmd);
+        if( tc_int > 0 && strcmp(tc_cmd, tc_ref) != 0)
         {
-            cout << "Test #" << i+1 << " failed" << endl;
-        }
-        else
-        {
-            cout << "Test #" << i+1 << " passed" << endl;
+            sprintf(tc_tmpMsg, "    Read back: (%s), Expected (%s)\n", tc_cmd, tc_ref);
+            strcat(msgTestResult, tc_tmpMsg);
+            tc_result = false;
         }
     }
+
+    // Check the buffer state
+    strcat(msgTestResult, "  Checking buffer state after emptying...\n");
+    tc_int = cmdBuf->getNumCmds();
+    tc_int = cmdBuf->getFreeSerBuf();
+    tc_int = cmdBuf->getOccupied();
+    if(cmdBuf->getNumCmds() != 0 ||
+        cmdBuf->getFreeSerBuf() != TC2_NUM_BYTES_SERIAL_BT_BUFF || 
+        cmdBuf->getOccupied() != 0)
+    {
+        strcat(msgTestResult, "    getNumCmds(), getFree(), or getOccupied() incorrectly initialized");
+        tc_result = false;
+    }
+
+    return tc_result;
+
+} // TC2
+
+
+// Stores test results
+bool * testResults = new bool[NUM_TESTS]();
+char * tc_resultMessage = new char[1024]();
+
+int main(void) 
+{
+    
+    testResults[0] = tc1_basicFunctionality(tc_resultMessage);   
+    printTcResult(testResults[0], 1, tc_resultMessage);
+
+    testResults[1] = tc2_bufferFill(tc_resultMessage);   
+    printTcResult(testResults[1], 2, tc_resultMessage);
 
 }

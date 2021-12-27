@@ -14,9 +14,14 @@ class CmdBuffer {
         size_t readToEnd(char * dest);
         int readCmd(char * dest);
         size_t write(char * data, size_t n);
+        
+        // Command length buffer status
         int getNumCmds(void) { return rbCmdLenBuf->getOccupied(); }
+        int getFreeCmdLenBuf(void) { return rbCmdLenBuf->getFree(); }
+        
+        // Serial buffer status
         size_t getOccupied(void) { return rbSerBuf->getOccupied(); }
-        size_t getFree(void){ return rbSerBuf->getFree(); }
+        size_t getFreeSerBuf(void) { return rbSerBuf->getFree(); }
         
                     
     private:
