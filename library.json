@@ -9,12 +9,16 @@
     "headers": "cmdBuffer.h",
     "dependencies":
     {
-        "external-repo": "https://github.com/hflicka/Ring-buffer-Cpp-template.git"
+        "ringBuffer": "https://github.com/hflicka/Ring-buffer-Cpp-template.git"
     },
     "export": {
         "include":
         [
             "lib/cmdBuffer/cmdBuffer.*"
+        ],
+        "exclude":
+        [
+            "lib/cmdBuffer/ringBuffer.h" 
         ]
     }
 }
