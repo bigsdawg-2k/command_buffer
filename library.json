@@ -9,7 +9,7 @@
     "headers": "cmdBuffer.h",
     "dependencies":
     {
-        "fastled/FastLED": "^3.4.0"
+        "external-repo": "https://github.com/hflicka/Ring-buffer-Cpp-template.git"
     },
     "export": {
         "include":
