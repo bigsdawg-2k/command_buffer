@@ -1,0 +1,20 @@
+{
+    "name": "cmdBuffer",
+    "version": "1.0.0",
+    "repository":
+    {
+        "type": "git",
+        "url": "https://github.com/bigsdawg-2k/command_buffer"
+    },
+    "headers": "cmdBuffer.h",
+    "dependencies":
+    {
+        "fastled/FastLED": "^3.4.0"
+    },
+    "export": {
+        "include":
+        [
+            "lib/cmdBuffer/cmdBuffer.*"
+        ]
+    }
+}
