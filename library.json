@@ -11,6 +11,12 @@
     {
         "ringBuffer": "https://github.com/hflicka/Ring-buffer-Cpp-template.git"
     },
+    "build":
+    {
+        "include": "lib/cmdBuffer",
+        "srcDir": "lib/cmdBuffer",
+        "srcFilter": "-<lib/cmdBuffer/ringBuffer.h>"
+    },
     "export": {
         "include":
         [
