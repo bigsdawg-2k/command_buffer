@@ -6,25 +6,16 @@
         "type": "git",
         "url": "https://github.com/bigsdawg-2k/command_buffer"
     },
-    "headers": "cmdBuffer.h",
-    "dependencies":
-    {
-        "ringBuffer": "https://github.com/hflicka/Ring-buffer-Cpp-template.git"
-    },
+    "headers": ["cmdBuffer.h", "ringBuffer.h"],
     "build":
     {
         "include": "lib/cmdBuffer",
-        "srcDir": "lib/cmdBuffer",
-        "srcFilter": "-<lib/cmdBuffer/ringBuffer.h>"
+        "srcDir": "lib/cmdBuffer"
     },
     "export": {
         "include":
         [
-            "lib/cmdBuffer/cmdBuffer.*"
-        ],
-        "exclude":
-        [
-            "lib/cmdBuffer/ringBuffer.h" 
+            "lib/cmdBuffer/*"
         ]
     }
 }
