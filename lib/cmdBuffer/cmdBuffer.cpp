@@ -4,6 +4,7 @@
 
 #include <cmdBuffer.h>
 
+//TODO: Needs updating to use cmdItem structuring
 // Constructor
 CmdBuffer::CmdBuffer(size_t size)
 {
@@ -24,6 +25,7 @@ int CmdBuffer::getNumDelims(char * data, int len)
     return count;
 }
 
+//TODO: Needs updating to use cmdItem structuring
 // Get the next command and save it in dest.  Return the size of the command read.
 int CmdBuffer::readCmd(char * dest)
 {
@@ -40,17 +42,7 @@ int CmdBuffer::readCmd(char * dest)
     }
 }
 
-// TODO needs to update rbCmdLenBuf state as well, maybe replace with a flush instead of read as this isn't particularily useful.
-size_t CmdBuffer::readToEnd(char * dest)
-{
-    size_t n = rbSerBuf->getOccupied();
-    if (n > 0) 
-    {
-        rbSerBuf->read(dest, n);
-    }
-    return n;
-}
-
+// TODO to be replaced with writeCmdMsg()
 size_t CmdBuffer::write(char * data, size_t n)
 {
     
