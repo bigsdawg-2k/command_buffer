@@ -21,39 +21,20 @@ class CmdBuffer {
 
         CmdBuffer(size_t size);
         
-        size_t getOccupied(void) { return rbSerBuf->getOccupied(); }
-        size_t getFree(void) { return rbSerBuf->getFree(); }
+        size_t getOccupied(void) { return rbCmdBuf->getOccupied(); }
+        size_t getFree(void) { return rbCmdBuf->getFree(); }
 
-        size_t sanitizeMsg(char * data, size_t n);
-        size_t writeCmdMsg(char * data, size_t n);
-        size_t readCmd(cmdItem * dest);
-        
-        /*
-         * Stuff to get rid of...
-         */ 
-        int getNumCmds(void) { return rbCmdLenBuf->getOccupied(); }
-        int getFreeCmdLenBuf(void) { return rbCmdLenBuf->getFree(); }
-        size_t getFreeSerBuf(void) { return rbSerBuf->getFree(); }
-        int getNumCmds(void) { return rbCmdLenBuf->getOccupied(); }
-        int getFreeCmdLenBuf(void) { return rbCmdLenBuf->getFree(); }
-        int readCmd(char * dest);
-        size_t write(char * data, size_t n);
-        
+        cmdItem* parseCmd(cmdItem* cmd, char* data, size_t n);
+        size_t writeCmdMsg(char* data, size_t n);
+        size_t readCmd(cmdItem* dest);
         
     private:
         
         // Holds the pre-parsed commands
-        ringbuffer<cmdItem>* rbCmdBuffer;   
+        ringbuffer<cmdItem>* rbCmdBuf;   
         
         // Private utility members
-        int getNumDelims(char * data, int len);
-
-        /*
-         * Stuff to get rid of...
-         */ 
-        ringbuffer<char>* rbSerBuf;     // Holds serial stream of commands (incl. delimiters)
-        ringbuffer<int>* rbCmdLenBuf;   // Holds length of each command in rbSerBuff
-        
+        int getNumDelims(char* data, int len);
 
 }; // class cmdBuffer
 
