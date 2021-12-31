@@ -7,7 +7,7 @@
 using std::cout;
 using std::endl;
 
-#define NUM_BYTES_SERIAL_BT_BUFF    1024
+#define NUM_BUF_ITEMS               64
 #define MAX_LOG_MSG                 1024
 #define NUM_TESTS                   2
 
@@ -43,55 +43,68 @@ void printTcResult(bool result, int tcNum, char * msgResult)
 bool tc1_basicFunctionality(char * msgTestResult) 
 {
 
-    #define TC1_COMMAND                     "P0;"
+    #define TC1_COMMAND                     "L02;"
     #define TC1_NUM_BYTES_SERIAL_BT_BUFF    NUM_BYTES_SERIAL_BT_BUFF
 
     // Main command buffer for testing
     CmdBuffer* cmdBuf;
-    cmdBuf = new CmdBuffer(TC1_NUM_BYTES_SERIAL_BT_BUFF);
+    cmdBuf = new CmdBuffer(NUM_BUF_ITEMS);
 
     // TC variables
     bool tc_result = true;
     int tc_int, tc_CmdArrLen;
     char * tc_cmdArr = new char[64]();
     char * tc_charArr = new char[64]();
+    cmdItem tc_cmdItem;
 
     strcpy(tc_cmdArr, TC1_COMMAND);
     tc_CmdArrLen = strlen(TC1_COMMAND);
 
     // Check that the newly created object has the correct initial state
     // The new buffer was created in the setUp()
-    if(cmdBuf->getNumCmds() != 0 ||
-        cmdBuf->getFreeSerBuf() != TC1_NUM_BYTES_SERIAL_BT_BUFF || 
-        cmdBuf->getOccupied() != 0)
+    if(cmdBuf->getOccupied() != 0 ||
+        cmdBuf->getFree() != NUM_BUF_ITEMS)
     {
-        cout << "getNumCmds(), getFree(), or getOccupied() incorrectly initialized";
+        cout << "getOccupied() or getFree() incorrectly initialized";
         tc_result = false;
     }
     
     // Add a command to the buffer
-    tc_int = cmdBuf->write(tc_cmdArr, tc_CmdArrLen);
-    if(tc_int != tc_CmdArrLen) 
+    tc_int = cmdBuf->writeCmdMsg(tc_cmdArr, tc_CmdArrLen);
+    if(tc_int != 1) 
     { 
-        cout << "cmdBuf->write() returned " << tc_int << ", expected " << tc_CmdArrLen; 
+        cout << "cmdBuf->writeCmdMsg() returned " << tc_int << ", expected " << 1 << endl; 
         tc_result = false;
     }
     
-    tc_int = cmdBuf->getNumCmds();
-    if(tc_int != 1)
+    // Check that there is an item in the buffer
+    tc_int = cmdBuf->getOccupied();
+    if (tc_int != 1)
     { 
-        cout << "cmdBuf->getNumCmds() returned " << tc_int << ", expected " << 1;
+        cout << "cmdBuf->getOccupied() returned " << tc_int << ", expected " << 1 << endl;
+        tc_result = false;
+    }
+    tc_int = cmdBuf->getFree();
+    if (tc_int != NUM_BUF_ITEMS - 1)
+    {
+        cout << "cmdBuf->getFree() returned " << tc_int << ", expected " << NUM_BUF_ITEMS - 1 << endl;
         tc_result = false;
     }
     
     // Read the command from the buffer
-    tc_int = cmdBuf->readCmd(tc_charArr);
-    if(tc_int != tc_CmdArrLen ||
-        strcmp(tc_charArr, tc_cmdArr) != 0 ||
-        cmdBuf->getNumCmds() != 0)
+    tc_int = cmdBuf->readCmd(&tc_cmdItem);
+    if (tc_int != 1 ||
+        tc_cmdItem.instruction != 2 ||
+        tc_cmdItem.moduleTarget != 1 ||
+        tc_cmdItem.vArgLen != 0 ||
+        cmdBuf->getOccupied() != 0 ||
+        cmdBuf->getFree() != NUM_BUF_ITEMS)
+
     {
-        cout << "cmdBuf->readCmd() returned " << tc_int << " bytes, expected " << tc_CmdArrLen << endl;
-        cout << "cmdBuf->readCmd() returned " << tc_charArr << ", expected " << tc_cmdArr << endl;
+        cout << "cmdBuf->readCmd() returned " << tc_int << " commands, expected " << 1 << endl;
+        cout << "cmdItem has moduleTarget " << tc_cmdItem.moduleTarget << ", expected " << 1 << endl;
+        cout << "cmdItem has instruction " << tc_cmdItem.instruction << ", expected " << 2 << endl;
+        cout << "cmdItem has vArgLen " << tc_cmdItem.vArgLen << ", expected " << 0 << endl;
         tc_result = false;
     }
 
@@ -109,7 +122,7 @@ bool tc1_basicFunctionality(char * msgTestResult)
  * Read out all commands
  * Check the buffer state
  */
-bool tc2_bufferFill(char * msgTestResult) 
+/*bool tc2_bufferFill(char * msgTestResult) 
 {
 
     #define TC2_NUM_BYTES_SERIAL_BT_BUFF    20
@@ -211,11 +224,12 @@ bool tc2_bufferFill(char * msgTestResult)
     return tc_result;
 
 } // TC2
+*/
 
 /*
  * TEST CASE 3: Multiple command add 
  */
-bool tc3_addMultipleCommands(char * msgTestResult) 
+/*bool tc3_addMultipleCommands(char * msgTestResult) 
 {
     #define TC3_NUM_BYTES_SERIAL_BT_BUFF    20
     #define TC3_CMD                "P0;P1;P2;"
@@ -267,7 +281,7 @@ bool tc3_addMultipleCommands(char * msgTestResult)
     return tc_result;
     
 }
-
+*/
 
 // Stores test results
 bool * testResults = new bool[NUM_TESTS]();
@@ -279,10 +293,12 @@ int main(void)
     testResults[0] = tc1_basicFunctionality(tc_resultMessage);   
     printTcResult(testResults[0], 1, tc_resultMessage);
 
+/*
     testResults[1] = tc2_bufferFill(tc_resultMessage);   
     printTcResult(testResults[1], 2, tc_resultMessage);
     
     testResults[2] = tc3_addMultipleCommands(tc_resultMessage);   
     printTcResult(testResults[2], 3, tc_resultMessage);
+*/
 
 }

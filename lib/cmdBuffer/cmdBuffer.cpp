@@ -25,7 +25,7 @@ size_t CmdBuffer::readCmd(cmdItem* dest)
 {
     if (rbCmdBuf->getOccupied() > 0)
     {
-        rbCmdBuf->read(dest, 1);
+        return rbCmdBuf->read(dest, 1);
     }
     
     return 0; 
@@ -55,7 +55,7 @@ cmdItem* CmdBuffer::parseCmd(cmdItem* cmd, char * data, size_t n)
     
     // All remaining fields are 2-digit hex numbers
     strField[2] = 0;
-    for (i = 1, iArgs = 0; i < n; i += 2)
+    for (i = 1, iArgs = 0; i < n - 1; i += 2)
     {
         strncpy(strField, data + i, 2);
         intField = std::stoi(strField, nullptr, 16);
@@ -97,10 +97,11 @@ size_t CmdBuffer::writeCmdMsg(char* data, size_t n)
         if (data[i] == CmdBuffer::delim) 
         { 
             CmdBuffer::parseCmd(&thisCmd, &data[thisCmdStart], i - thisCmdStart + 1);
+            rbCmdBuf->write(&thisCmd, 1);
             nCmds++; 
         }
     }
-    
+
     return nCmds;
     
 }
