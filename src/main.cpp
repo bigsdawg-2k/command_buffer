@@ -3,13 +3,15 @@
 #include <string>
 #include <cstdio>
 #include <cmdBuffer.h>
+#include <time.h>
 
 using std::cout;
 using std::endl;
 
-#define NUM_BUF_ITEMS               64
-#define MAX_LOG_MSG                 1024
-#define NUM_TESTS                   2
+#define NUM_BUF_ITEMS           20
+#define MAX_LOG_MSG             1024
+#define NUM_TESTS               2
+#define CMD_MESSAGE_HDR_LEN     5
 
 char * tc_tmpMsg = new char[1024]();
 
@@ -113,14 +115,86 @@ bool tc1_basicFunctionality(char * msgTestResult)
 } // TC1
 
 /*
- * TEST CASE 2: Buffer overflow test
+ * TEST CASE 2: Variable Argument Size 
  * Create a small cmdBuffer
- * Add commands until it is full
- * Check the buffer state
- * Read out a command
- * Add commands until full
- * Read out all commands
- * Check the buffer state
+ * Add command with variable length argument
+ * Read the command and verify the vArgs and vArgLen
+ */
+bool tc2_vArgTest(char * msgTestResult) 
+{
+
+    #define TC2_MAX_N_ARGS          32
+    int tc_nArgs, tc_int, tc_cmdMsgLen, i;
+    bool tc_result = true;
+        
+    // Determine number of vArgs
+    srand(time(0));
+    tc_nArgs = rand()%(TC2_MAX_N_ARGS - 1) + 1;
+
+    // Randomly generate vArgs
+    int tc_randArgs[tc_nArgs];
+    for (i = 0; i < tc_nArgs; i++)
+    {
+        tc_randArgs[i] = rand()%256;
+    }
+
+    // Create command message
+    char * tc_cmdMsg = new char[CMD_MESSAGE_HDR_LEN + 5 + TC2_MAX_N_ARGS * 2]();
+    sprintf(tc_cmdMsg, "L01%02X", tc_nArgs);
+    for(i = 0; i <= tc_nArgs + 1; i++)    
+    {
+        if (i < tc_nArgs)
+        {
+            sprintf(&tc_cmdMsg[CMD_MESSAGE_HDR_LEN + i * 2], "%02X", tc_randArgs[i]);
+        }
+        else if (i == tc_nArgs)
+        {
+            tc_cmdMsg[CMD_MESSAGE_HDR_LEN + i * 2] = ';';
+        }
+        else
+        {
+            tc_cmdMsg[CMD_MESSAGE_HDR_LEN + i * 2] = NULL;
+        }
+    }
+    cout << "Generated command message: " << tc_cmdMsg << endl;
+
+    // Add message to buffer
+    cout << "Writing to buffer..." << endl;
+    CmdBuffer* cmdBuf;
+    cmdBuf = new CmdBuffer(NUM_BUF_ITEMS);
+    tc_cmdMsgLen = strlen(tc_cmdMsg);
+    tc_int = cmdBuf->writeCmdMsg(tc_cmdMsg, tc_cmdMsgLen);
+
+    // Read message from buffer
+    cout << "Reading from buffer..." << endl;
+    cmdItem tc_cmdItem;
+    tc_int = cmdBuf->readCmd(&tc_cmdItem);
+    
+    // Compare result
+    cout << "  Validating result..." << endl;
+    if (tc_nArgs != tc_cmdItem.vArgLen)
+    {
+        cout << "    Expected (" << tc_nArgs << ") arguments, Received (" << tc_cmdItem.vArgLen << ")" << endl;
+        tc_result = false;
+    } 
+    for (i = 0; i < tc_nArgs; i++)
+    {
+        if(tc_randArgs[i] != tc_cmdItem.vArg[i])
+        {
+            cout << "    Expected (" << tc_randArgs[i] << "), Received (" << tc_cmdItem.vArg[i] << ")" << endl;
+            tc_result = false;
+        }
+    }
+    
+    return tc_result;
+
+} // TC2
+
+/*
+ * TEST CASE 2: Variable Argument Size 
+ * Create a small cmdBuffer
+ * Add command with variable length argument
+ * Read the command and verify the vArgs and vArgLen
  */
 /*bool tc2_bufferFill(char * msgTestResult) 
 {
@@ -293,10 +367,10 @@ int main(void)
     testResults[0] = tc1_basicFunctionality(tc_resultMessage);   
     printTcResult(testResults[0], 1, tc_resultMessage);
 
-/*
-    testResults[1] = tc2_bufferFill(tc_resultMessage);   
+
+    testResults[1] = tc2_vArgTest(tc_resultMessage);   
     printTcResult(testResults[1], 2, tc_resultMessage);
-    
+/*    
     testResults[2] = tc3_addMultipleCommands(tc_resultMessage);   
     printTcResult(testResults[2], 3, tc_resultMessage);
 */
