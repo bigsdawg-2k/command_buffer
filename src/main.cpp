@@ -3,13 +3,15 @@
 #include <string>
 #include <cstdio>
 #include <cmdBuffer.h>
+#include <time.h>
 
 using std::cout;
 using std::endl;
 
-#define NUM_BYTES_SERIAL_BT_BUFF    1024
-#define MAX_LOG_MSG                 1024
-#define NUM_TESTS                   2
+#define NUM_BUF_ITEMS           20
+#define MAX_LOG_MSG             1024
+#define NUM_TESTS               2
+#define CMD_MESSAGE_HDR_LEN     5
 
 char * tc_tmpMsg = new char[1024]();
 
@@ -43,55 +45,68 @@ void printTcResult(bool result, int tcNum, char * msgResult)
 bool tc1_basicFunctionality(char * msgTestResult) 
 {
 
-    #define TC1_COMMAND                     "P0;"
+    #define TC1_COMMAND                     "L02;"
     #define TC1_NUM_BYTES_SERIAL_BT_BUFF    NUM_BYTES_SERIAL_BT_BUFF
 
     // Main command buffer for testing
     CmdBuffer* cmdBuf;
-    cmdBuf = new CmdBuffer(TC1_NUM_BYTES_SERIAL_BT_BUFF);
+    cmdBuf = new CmdBuffer(NUM_BUF_ITEMS);
 
     // TC variables
     bool tc_result = true;
     int tc_int, tc_CmdArrLen;
     char * tc_cmdArr = new char[64]();
     char * tc_charArr = new char[64]();
+    cmdItem tc_cmdItem;
 
     strcpy(tc_cmdArr, TC1_COMMAND);
     tc_CmdArrLen = strlen(TC1_COMMAND);
 
     // Check that the newly created object has the correct initial state
     // The new buffer was created in the setUp()
-    if(cmdBuf->getNumCmds() != 0 ||
-        cmdBuf->getFreeSerBuf() != TC1_NUM_BYTES_SERIAL_BT_BUFF || 
-        cmdBuf->getOccupied() != 0)
+    if(cmdBuf->getOccupied() != 0 ||
+        cmdBuf->getFree() != NUM_BUF_ITEMS)
     {
-        cout << "getNumCmds(), getFree(), or getOccupied() incorrectly initialized";
+        cout << "getOccupied() or getFree() incorrectly initialized";
         tc_result = false;
     }
     
     // Add a command to the buffer
-    tc_int = cmdBuf->write(tc_cmdArr, tc_CmdArrLen);
-    if(tc_int != tc_CmdArrLen) 
+    tc_int = cmdBuf->writeCmdMsg(tc_cmdArr, tc_CmdArrLen);
+    if(tc_int != 1) 
     { 
-        cout << "cmdBuf->write() returned " << tc_int << ", expected " << tc_CmdArrLen; 
+        cout << "cmdBuf->writeCmdMsg() returned " << tc_int << ", expected " << 1 << endl; 
         tc_result = false;
     }
     
-    tc_int = cmdBuf->getNumCmds();
-    if(tc_int != 1)
+    // Check that there is an item in the buffer
+    tc_int = cmdBuf->getOccupied();
+    if (tc_int != 1)
     { 
-        cout << "cmdBuf->getNumCmds() returned " << tc_int << ", expected " << 1;
+        cout << "cmdBuf->getOccupied() returned " << tc_int << ", expected " << 1 << endl;
+        tc_result = false;
+    }
+    tc_int = cmdBuf->getFree();
+    if (tc_int != NUM_BUF_ITEMS - 1)
+    {
+        cout << "cmdBuf->getFree() returned " << tc_int << ", expected " << NUM_BUF_ITEMS - 1 << endl;
         tc_result = false;
     }
     
     // Read the command from the buffer
-    tc_int = cmdBuf->readCmd(tc_charArr);
-    if(tc_int != tc_CmdArrLen ||
-        strcmp(tc_charArr, tc_cmdArr) != 0 ||
-        cmdBuf->getNumCmds() != 0)
+    tc_int = cmdBuf->readCmd(&tc_cmdItem);
+    if (tc_int != 1 ||
+        tc_cmdItem.instruction != 2 ||
+        tc_cmdItem.moduleTarget != 1 ||
+        tc_cmdItem.vArgLen != 0 ||
+        cmdBuf->getOccupied() != 0 ||
+        cmdBuf->getFree() != NUM_BUF_ITEMS)
+
     {
-        cout << "cmdBuf->readCmd() returned " << tc_int << " bytes, expected " << tc_CmdArrLen << endl;
-        cout << "cmdBuf->readCmd() returned " << tc_charArr << ", expected " << tc_cmdArr << endl;
+        cout << "cmdBuf->readCmd() returned " << tc_int << " commands, expected " << 1 << endl;
+        cout << "cmdItem has moduleTarget " << tc_cmdItem.moduleTarget << ", expected " << 1 << endl;
+        cout << "cmdItem has instruction " << tc_cmdItem.instruction << ", expected " << 2 << endl;
+        cout << "cmdItem has vArgLen " << tc_cmdItem.vArgLen << ", expected " << 0 << endl;
         tc_result = false;
     }
 
@@ -100,16 +115,88 @@ bool tc1_basicFunctionality(char * msgTestResult)
 } // TC1
 
 /*
- * TEST CASE 2: Buffer overflow test
+ * TEST CASE 2: Variable Argument Size 
  * Create a small cmdBuffer
- * Add commands until it is full
- * Check the buffer state
- * Read out a command
- * Add commands until full
- * Read out all commands
- * Check the buffer state
+ * Add command with variable length argument
+ * Read the command and verify the vArgs and vArgLen
  */
-bool tc2_bufferFill(char * msgTestResult) 
+bool tc2_vArgTest(char * msgTestResult) 
+{
+
+    #define TC2_MAX_N_ARGS          32
+    int tc_nArgs, tc_int, tc_cmdMsgLen, i;
+    bool tc_result = true;
+        
+    // Determine number of vArgs
+    srand(time(0));
+    tc_nArgs = rand()%(TC2_MAX_N_ARGS - 1) + 1;
+
+    // Randomly generate vArgs
+    int tc_randArgs[tc_nArgs];
+    for (i = 0; i < tc_nArgs; i++)
+    {
+        tc_randArgs[i] = rand()%256;
+    }
+
+    // Create command message
+    char * tc_cmdMsg = new char[CMD_MESSAGE_HDR_LEN + 5 + TC2_MAX_N_ARGS * 2]();
+    sprintf(tc_cmdMsg, "L01%02X", tc_nArgs);
+    for(i = 0; i <= tc_nArgs + 1; i++)    
+    {
+        if (i < tc_nArgs)
+        {
+            sprintf(&tc_cmdMsg[CMD_MESSAGE_HDR_LEN + i * 2], "%02X", tc_randArgs[i]);
+        }
+        else if (i == tc_nArgs)
+        {
+            tc_cmdMsg[CMD_MESSAGE_HDR_LEN + i * 2] = ';';
+        }
+        else
+        {
+            tc_cmdMsg[CMD_MESSAGE_HDR_LEN + i * 2] = NULL;
+        }
+    }
+    cout << "Generated command message: " << tc_cmdMsg << endl;
+
+    // Add message to buffer
+    cout << "Writing to buffer..." << endl;
+    CmdBuffer* cmdBuf;
+    cmdBuf = new CmdBuffer(NUM_BUF_ITEMS);
+    tc_cmdMsgLen = strlen(tc_cmdMsg);
+    tc_int = cmdBuf->writeCmdMsg(tc_cmdMsg, tc_cmdMsgLen);
+
+    // Read message from buffer
+    cout << "Reading from buffer..." << endl;
+    cmdItem tc_cmdItem;
+    tc_int = cmdBuf->readCmd(&tc_cmdItem);
+    
+    // Compare result
+    cout << "  Validating result..." << endl;
+    if (tc_nArgs != tc_cmdItem.vArgLen)
+    {
+        cout << "    Expected (" << tc_nArgs << ") arguments, Received (" << tc_cmdItem.vArgLen << ")" << endl;
+        tc_result = false;
+    } 
+    for (i = 0; i < tc_nArgs; i++)
+    {
+        if(tc_randArgs[i] != tc_cmdItem.vArg[i])
+        {
+            cout << "    Expected (" << tc_randArgs[i] << "), Received (" << tc_cmdItem.vArg[i] << ")" << endl;
+            tc_result = false;
+        }
+    }
+    
+    return tc_result;
+
+} // TC2
+
+/*
+ * TEST CASE 2: Variable Argument Size 
+ * Create a small cmdBuffer
+ * Add command with variable length argument
+ * Read the command and verify the vArgs and vArgLen
+ */
+/*bool tc2_bufferFill(char * msgTestResult) 
 {
 
     #define TC2_NUM_BYTES_SERIAL_BT_BUFF    20
@@ -211,11 +298,12 @@ bool tc2_bufferFill(char * msgTestResult)
     return tc_result;
 
 } // TC2
+*/
 
 /*
  * TEST CASE 3: Multiple command add 
  */
-bool tc3_addMultipleCommands(char * msgTestResult) 
+/*bool tc3_addMultipleCommands(char * msgTestResult) 
 {
     #define TC3_NUM_BYTES_SERIAL_BT_BUFF    20
     #define TC3_CMD                "P0;P1;P2;"
@@ -267,7 +355,7 @@ bool tc3_addMultipleCommands(char * msgTestResult)
     return tc_result;
     
 }
-
+*/
 
 // Stores test results
 bool * testResults = new bool[NUM_TESTS]();
@@ -279,10 +367,12 @@ int main(void)
     testResults[0] = tc1_basicFunctionality(tc_resultMessage);   
     printTcResult(testResults[0], 1, tc_resultMessage);
 
-    testResults[1] = tc2_bufferFill(tc_resultMessage);   
+
+    testResults[1] = tc2_vArgTest(tc_resultMessage);   
     printTcResult(testResults[1], 2, tc_resultMessage);
-    
+/*    
     testResults[2] = tc3_addMultipleCommands(tc_resultMessage);   
     printTcResult(testResults[2], 3, tc_resultMessage);
+*/
 
 }

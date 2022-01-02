@@ -4,6 +4,15 @@
 #include <stdint.h>
 #include <ringbuffer.h>
 
+struct cmdItem
+{
+    int moduleTarget;   // The command item's target module
+    int instruction;    // The actual instruction for the target module
+    int vArgLen;        // The number of the attached vArgs in the attached array that
+                        // are associated with the given instruction
+    int * vArg;         // The arguments that are associated with the given instruction
+};
+
 class CmdBuffer {
     
     public:
@@ -11,25 +20,21 @@ class CmdBuffer {
         static const char delim = 59;   // ';' delimiter
 
         CmdBuffer(size_t size);
-        size_t readToEnd(char * dest);
-        int readCmd(char * dest);
-        size_t write(char * data, size_t n);
         
-        // Command length buffer status
-        int getNumCmds(void) { return rbCmdLenBuf->getOccupied(); }
-        int getFreeCmdLenBuf(void) { return rbCmdLenBuf->getFree(); }
+        size_t getOccupied(void) { return rbCmdBuf->getOccupied(); }
+        size_t getFree(void) { return rbCmdBuf->getFree(); }
+
+        cmdItem* parseCmd(cmdItem* cmd, char* data, size_t n);
+        size_t writeCmdMsg(char* data, size_t n);
+        size_t readCmd(cmdItem* dest);
         
-        // Serial buffer status
-        size_t getOccupied(void) { return rbSerBuf->getOccupied(); }
-        size_t getFreeSerBuf(void) { return rbSerBuf->getFree(); }
-        
-                    
     private:
         
-        ringbuffer<char>* rbSerBuf;     // Holds serial stream of commands (incl. delimiters)
-        ringbuffer<int>* rbCmdLenBuf;   // Holds length of each command in rbSerBuff
-        int getNumDelims(char * data, int len);
+        // Holds the pre-parsed commands
+        ringbuffer<cmdItem>* rbCmdBuf;   
         
+        // Private utility members
+        int getNumDelims(char* data, int len);
 
 }; // class cmdBuffer
 
