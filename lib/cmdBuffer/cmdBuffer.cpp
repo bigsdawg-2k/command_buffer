@@ -25,6 +25,7 @@ size_t CmdBuffer::readCmd(cmdItem* dest)
 {
     if (rbCmdBuf->getOccupied() > 0)
     {
+        // TODO Free of malloc
         return rbCmdBuf->read(dest, 1);
     }
     
@@ -74,6 +75,13 @@ cmdItem* CmdBuffer::parseCmd(cmdItem* cmd, char * data, size_t n)
         {
             cmd->vArg[iArgs++] = intField;
         }
+    }
+
+    // If there were no arguments then zero out the counter and null the pointer
+    if (iArgs == 0)
+    {
+        cmd->vArg = NULL;
+        cmd->vArgLen = 0;
     }
 
     return cmd;
